@@ -105,6 +105,7 @@ const loadedGroups = ref<PolicyGroups>({
 const rulesJson = ref('[]');
 const useAdvancedJson = ref(false);
 const uiRules = ref<UiRule[]>([]);
+const ruleMatchCounts = ref<Record<string, number>>({});
 const validationInfo = ref<string | null>(null);
 
 const showRuleModal = ref(false);
@@ -1097,6 +1098,10 @@ function asPolicyDocumentData(raw: unknown): PolicyDocumentData {
           : {},
     },
     groups: safeGroups,
+    match_counts:
+      data.match_counts && typeof data.match_counts === 'object'
+        ? (data.match_counts as Record<string, number>)
+        : {},
   };
 }
 
@@ -1114,6 +1119,7 @@ async function loadPolicy() {
     const data = asPolicyDocumentData(response.data);
     syncLoadedState(data);
     resetDraftState();
+    ruleMatchCounts.value = data.match_counts ?? {};
   } catch (err) {
     error.value = formatPolicyApiError(err, 'Failed to load policy');
   } finally {
@@ -1416,6 +1422,7 @@ onMounted(loadPolicy);
                     <th class="w-44 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Name</th>
                     <th class="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Logic</th>
                     <th class="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Action</th>
+                    <th class="w-24 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Matches</th>
                     <th class="w-48 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Controls</th>
                   </tr>
                 </thead>
@@ -1452,6 +1459,19 @@ onMounted(loadPolicy);
                         {{ actionLabel(rule.action) }}
                       </span>
                     </td>
+                    <td class="px-3 py-3">
+                      <span
+                        class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                        :class="(ruleMatchCounts[rule.id] ?? 0) > 0
+                          ? 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green'
+                          : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/opacity-medium dark:bg-white/opacity-subtle dark:text-content-muted'"
+                        :title="(ruleMatchCounts[rule.id] ?? 0) > 0
+                          ? `Matched ${ruleMatchCounts[rule.id]} packet(s) since the policy engine was last reloaded`
+                          : 'No matches since the policy engine was last reloaded'"
+                      >
+                        {{ ruleMatchCounts[rule.id] ?? 0 }}
+                      </span>
+                    </td>
                     <td class="px-3 py-3 text-right">
                       <div class="inline-flex flex-wrap items-center justify-end gap-1">
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, -1)">▲</button>
@@ -1462,7 +1482,7 @@ onMounted(loadPolicy);
                     </td>
                   </tr>
                   <tr v-if="!uiRules.length">
-                    <td colspan="6" class="px-3 py-8 text-center text-xs text-content-muted">No rules yet. Add your first rule.</td>
+                    <td colspan="7" class="px-3 py-8 text-center text-xs text-content-muted">No rules yet. Add your first rule.</td>
                   </tr>
                 </tbody>
               </table>

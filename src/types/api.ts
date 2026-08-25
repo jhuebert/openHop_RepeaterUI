@@ -580,6 +580,8 @@ export interface PolicyDocumentData {
   exists?: boolean;
   policy_engine: PolicyEngineConfig;
   groups: PolicyGroups;
+  /** Per-rule match counts since the policy engine was last loaded (rule id -> count). */
+  match_counts?: Record<string, number>;
 }
 
 export interface PolicyValidationResult {
